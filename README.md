@@ -11,9 +11,8 @@ TranServer是一个简单的转码服务器，主要将视频从rtsp格式转换
 
 # （一）使用说明
 ## 程序下载
-	# 仅提供macOS和centos7两个编译版本，如需其他环境，请自行编译
-	百度云：
-	提取码：
+	# 仅提供centos7编译版本，如需其他环境，请自行编译
+	百度云：链接:https://pan.baidu.com/s/1ES89wh17lZnSHKMaWGeVaw  密码:cre8
 
 ## 配置文件
 
