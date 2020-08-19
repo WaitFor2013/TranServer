@@ -1,11 +1,3 @@
-/*
- *
- * 简易转码服务（从rtsp转码为hls）
- * 1、读取配置文件，获取可以转码的rtsp流和标示名
- * 2、基于http请求
- *      如果有标示名，则开启转码服务
- *      无http请求，延时关闭转码服务
- */
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <event.h>
@@ -53,7 +45,7 @@ static const int has_trans(char *hlsName){
     int i=0;
     while (i < start_trans_size)
     {
-        if(strstr(startedTrans[i].hlsName,hlsName) != NULL){
+        if(strstr(startedTrans[i].hlsName,hlsName) != NULL && strstr(hlsName,startedTrans[i].hlsName) != NULL ){
             // 更新时间戳
             time_t tt;
             time(&tt);
@@ -71,7 +63,8 @@ static const int start_trans(char *hlsName){
     int i=0;
     while (i < total_para_size)
     {
-        if(strstr(transParams[i].hlsName,hlsName) != NULL){
+        
+        if(strstr(transParams[i].hlsName,hlsName) != NULL && strstr(hlsName,transParams[i].hlsName) != NULL ){
             
             pthread_t pt;
             time_t tt;
@@ -311,12 +304,33 @@ void main_request_handler(void *args)
 }
 
 void main_request_muti_thread(struct evhttp_request *r, void *args){
-    pthread_t pt;
-    pthread_attr_t attr; 
-    pthread_attr_init( &attr ); 
-    pthread_attr_setdetachstate(&attr,1);
-    pthread_create(&pt, &attr, main_request_handler, r);
-    fprintf(stdout,"开启线程处理请求，线程ID【%d】\n",pt);
+
+    char pathWithOutQuery[128];
+    const char * rq_temp = evhttp_request_uri(r);
+    int zIdx=0;
+    while (*(rq_temp) != '\0' && *(rq_temp) != '?')
+    {
+        char idxChar = *(rq_temp++);
+        pathWithOutQuery[zIdx++] = idxChar;
+    }
+    pathWithOutQuery[zIdx] = '\0';
+
+    char * path = apr_psprintf(g_mem_pool, "%s%s","./", pathWithOutQuery);
+    char *complemented_path;
+    int filesize = 0;
+
+    if(!exists(path, &complemented_path, &filesize)){
+        //仅仅文件不存在时，重启线程处理
+        pthread_t pt;
+        pthread_attr_t attr; 
+        pthread_attr_init( &attr ); 
+        pthread_attr_setdetachstate(&attr,1);
+        pthread_create(&pt, &attr, main_request_handler, r);
+        fprintf(stdout,"开启线程处理请求，线程ID【%d】\n",pt); 
+    }else{
+        main_request_handler(r);
+    }
+    
 }
 
 int main(int argc, char **argv)
